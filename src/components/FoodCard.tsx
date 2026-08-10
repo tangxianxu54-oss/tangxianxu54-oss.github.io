@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ArrowRightLeft } from "lucide-react";
+import { Plus, Trash2, ArrowRightLeft, Pencil } from "lucide-react";
 import type { Food, WeightBasis } from "@/data/foods";
 import type { MealType } from "@/store/useStore";
 
@@ -7,6 +7,7 @@ interface FoodCardProps {
   food: Food;
   onAdd: (grams: number, mealType: MealType, basis: WeightBasis) => void;
   onDelete?: () => void;
+  onEdit?: () => void;
 }
 
 const mealLabels: Record<MealType, string> = {
@@ -46,7 +47,7 @@ function pickNutrition(food: Food, basis: WeightBasis) {
       };
 }
 
-export default function FoodCard({ food, onAdd, onDelete }: FoodCardProps) {
+export default function FoodCard({ food, onAdd, onDelete, onEdit }: FoodCardProps) {
   const [grams, setGrams] = useState(100);
   const [expanded, setExpanded] = useState(false);
   const [mealType, setMealType] = useState<MealType>("breakfast");
@@ -206,6 +207,15 @@ export default function FoodCard({ food, onAdd, onDelete }: FoodCardProps) {
               <Plus className="h-4 w-4" />
               添加（{basisLabel[basis]}）
             </button>
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white/50 transition-all hover:border-mint/30 hover:text-mint-light"
+              >
+                <Pencil className="h-4 w-4" />
+                编辑
+              </button>
+            )}
             {onDelete && (
               <button
                 onClick={onDelete}
