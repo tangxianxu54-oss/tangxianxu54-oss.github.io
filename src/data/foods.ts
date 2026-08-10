@@ -489,6 +489,244 @@ export const foods: Food[] = [
     calories: 387, carbs: 99.9, protein: 0, fat: 0, fiber: 0,
     rawCalories: 387, rawCarbs: 99.9, rawProtein: 0, rawFat: 0, rawFiber: 0,
     basisDefault: "raw", cookFactor: 1 },
+
+  // ===== 常见中式主食面点 (Chinese Staple & Pastries) =====
+  // 馒头 — 成品（发酵面食），生熟一致
+  { id: "mantou", name: "馒头", nameEn: "Steamed Bun", category: "主食", emoji: "🍞",
+    calories: 223, carbs: 47.0, protein: 7.0, fat: 1.1, fiber: 1.3,
+    rawCalories: 223, rawCarbs: 47.0, rawProtein: 7.0, rawFat: 1.1, rawFiber: 1.3,
+    basisDefault: "raw", cookFactor: 1 },
+  // 包子(猪肉馅) — 成品
+  { id: "baozi-pork", name: "包子(猪肉馅)", nameEn: "Pork Baozi", category: "主食", emoji: "🥟",
+    calories: 227, carbs: 30.0, protein: 8.4, fat: 8.0, fiber: 1.0,
+    rawCalories: 227, rawCarbs: 30.0, rawProtein: 8.4, rawFat: 8.0, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 包子(素馅) — 成品
+  { id: "baozi-veggie", name: "包子(素馅)", nameEn: "Vegetable Baozi", category: "主食", emoji: "🥟",
+    calories: 199, carbs: 35.0, protein: 6.5, fat: 4.5, fiber: 2.0,
+    rawCalories: 199, rawCarbs: 35.0, rawProtein: 6.5, rawFat: 4.5, rawFiber: 2.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 饺子(猪肉馅) — 成品
+  { id: "dumpling-pork", name: "饺子(猪肉馅)", nameEn: "Pork Dumpling", category: "主食", emoji: "🥟",
+    calories: 239, carbs: 27.0, protein: 9.5, fat: 10.0, fiber: 1.2,
+    rawCalories: 239, rawCarbs: 27.0, rawProtein: 9.5, rawFat: 10.0, rawFiber: 1.2,
+    basisDefault: "raw", cookFactor: 1 },
+  // 锅贴 — 成品（煎制）
+  { id: "guotie", name: "锅贴", nameEn: "Potsticker", category: "主食", emoji: "🥟",
+    calories: 280, carbs: 28.0, protein: 10.0, fat: 14.0, fiber: 1.0,
+    rawCalories: 280, rawCarbs: 28.0, rawProtein: 10.0, rawFat: 14.0, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 油条 — 成品（油炸）
+  { id: "youtiao", name: "油条", nameEn: "Fried Dough Stick", category: "主食", emoji: "🌭",
+    calories: 388, carbs: 51.0, protein: 6.9, fat: 17.6, fiber: 1.0,
+    rawCalories: 388, rawCarbs: 51.0, rawProtein: 6.9, rawFat: 17.6, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 烧饼 — 成品
+  { id: "shaobing", name: "烧饼", nameEn: "Sesame Flatbread", category: "主食", emoji: "🫓",
+    calories: 326, carbs: 55.0, protein: 8.0, fat: 7.5, fiber: 2.0,
+    rawCalories: 326, rawCarbs: 55.0, rawProtein: 8.0, rawFat: 7.5, rawFiber: 2.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 花卷 — 成品
+  { id: "huajuan", name: "花卷", nameEn: "Steamed Twisted Roll", category: "主食", emoji: "🍞",
+    calories: 217, carbs: 45.0, protein: 6.5, fat: 1.2, fiber: 1.2,
+    rawCalories: 217, rawCarbs: 45.0, rawProtein: 6.5, rawFat: 1.2, rawFiber: 1.2,
+    basisDefault: "raw", cookFactor: 1 },
+  // 窝头 — 成品
+  { id: "wotou", name: "窝头", nameEn: "Cornmeal Bun", category: "主食", emoji: "🍞",
+    calories: 227, carbs: 49.0, protein: 5.5, fat: 1.3, fiber: 3.0,
+    rawCalories: 227, rawCarbs: 49.0, rawProtein: 5.5, rawFat: 1.3, rawFiber: 3.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 葱油饼 — 成品
+  { id: "congyoubing", name: "葱油饼", nameEn: "Scallion Pancake", category: "主食", emoji: "🫓",
+    calories: 325, carbs: 40.0, protein: 6.5, fat: 15.0, fiber: 1.5,
+    rawCalories: 325, rawCarbs: 40.0, rawProtein: 6.5, rawFat: 15.0, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 煎饼 — 成品
+  { id: "jianbing", name: "煎饼", nameEn: "Jianbing", category: "主食", emoji: "🫓",
+    calories: 324, carbs: 50.0, protein: 8.0, fat: 10.0, fiber: 1.5,
+    rawCalories: 324, rawCarbs: 50.0, rawProtein: 8.0, rawFat: 10.0, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 肉夹馍 — 成品
+  { id: "roujiamo", name: "肉夹馍", nameEn: "Roujiamo", category: "主食", emoji: "🥙",
+    calories: 280, carbs: 30.0, protein: 10.0, fat: 13.0, fiber: 1.0,
+    rawCalories: 280, rawCarbs: 30.0, rawProtein: 10.0, rawFat: 13.0, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 白米粥 — 熟（大米:水≈1:7），生大米 346 kcal
+  { id: "rice-porridge", name: "白米粥", nameEn: "Rice Porridge", category: "主食", emoji: "🍚",
+    calories: 46, carbs: 9.8, protein: 1.1, fat: 0.2, fiber: 0.1,
+    rawCalories: 346, rawCarbs: 77.7, rawProtein: 7.2, rawFat: 0.8, rawFiber: 1.3,
+    basisDefault: "cooked", cookFactor: 7.5 },
+  // 小米粥 — 熟
+  { id: "millet-porridge", name: "小米粥", nameEn: "Millet Porridge", category: "主食", emoji: "🥣",
+    calories: 46, carbs: 8.4, protein: 1.4, fat: 0.7, fiber: 0.3,
+    rawCalories: 358, rawCarbs: 72.8, rawProtein: 9.0, rawFat: 3.1, rawFiber: 1.6,
+    basisDefault: "cooked", cookFactor: 7.5 },
+  // 八宝粥 — 成品
+  { id: "babaozhou", name: "八宝粥", nameEn: "Eight-Treasure Porridge", category: "主食", emoji: "🥣",
+    calories: 100, carbs: 18.0, protein: 2.5, fat: 1.5, fiber: 1.5,
+    rawCalories: 100, rawCarbs: 18.0, rawProtein: 2.5, rawFat: 1.5, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 年糕 — 成品
+  { id: "niangao", name: "年糕", nameEn: "Rice Cake", category: "主食", emoji: "🍘",
+    calories: 154, carbs: 33.0, protein: 3.2, fat: 0.5, fiber: 0.5,
+    rawCalories: 154, rawCarbs: 33.0, rawProtein: 3.2, rawFat: 0.5, rawFiber: 0.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 方便面 — 成品
+  { id: "instant-noodle", name: "方便面", nameEn: "Instant Noodles", category: "主食", emoji: "🍜",
+    calories: 473, carbs: 61.0, protein: 9.5, fat: 21.0, fiber: 1.5,
+    rawCalories: 473, rawCarbs: 61.0, rawProtein: 9.5, rawFat: 21.0, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 粉丝(干) — 干货，泡发 cookFactor ≈ 4
+  { id: "glass-noodle", name: "粉丝(干)", nameEn: "Glass Noodle (Dry)", category: "主食", emoji: "🍜",
+    calories: 338, carbs: 83.0, protein: 0.8, fat: 0.2, fiber: 0.5,
+    rawCalories: 338, rawCarbs: 83.0, rawProtein: 0.8, rawFat: 0.2, rawFiber: 0.5,
+    basisDefault: "raw", cookFactor: 4.0 },
+  // 汤圆 — 成品
+  { id: "tangyuan", name: "汤圆", nameEn: "Glutinous Rice Ball", category: "主食", emoji: "🟤",
+    calories: 311, carbs: 50.0, protein: 5.0, fat: 10.0, fiber: 0.8,
+    rawCalories: 311, rawCarbs: 50.0, rawProtein: 5.0, rawFat: 10.0, rawFiber: 0.8,
+    basisDefault: "raw", cookFactor: 1 },
+  // 春卷 — 成品（油炸）
+  { id: "chunjuan", name: "春卷", nameEn: "Spring Roll", category: "主食", emoji: "🥟",
+    calories: 320, carbs: 35.0, protein: 7.0, fat: 16.0, fiber: 1.5,
+    rawCalories: 320, rawCarbs: 35.0, rawProtein: 7.0, rawFat: 16.0, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 粽子 — 成品
+  { id: "zongzi", name: "粽子", nameEn: "Zongzi", category: "主食", emoji: "🎋",
+    calories: 195, carbs: 35.0, protein: 5.0, fat: 4.0, fiber: 1.0,
+    rawCalories: 195, rawCarbs: 35.0, rawProtein: 5.0, rawFat: 4.0, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 豆沙包 — 成品
+  { id: "doushabao", name: "豆沙包", nameEn: "Red Bean Bun", category: "主食", emoji: "🥟",
+    calories: 240, carbs: 50.0, protein: 6.0, fat: 1.5, fiber: 1.5,
+    rawCalories: 240, rawCarbs: 50.0, rawProtein: 6.0, rawFat: 1.5, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+
+  // ===== 常见中式蛋类 (Chinese Eggs) =====
+  // 鸭蛋 — 生熟一体
+  { id: "duck-egg", name: "鸭蛋", nameEn: "Duck Egg", category: "蛋奶", emoji: "🥚",
+    calories: 180, carbs: 3.1, protein: 12.6, fat: 13.0, fiber: 0,
+    rawCalories: 180, rawCarbs: 3.1, rawProtein: 12.6, rawFat: 13.0, rawFiber: 0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 咸鸭蛋 — 成品
+  { id: "salted-duck-egg", name: "咸鸭蛋", nameEn: "Salted Duck Egg", category: "蛋奶", emoji: "🥚",
+    calories: 190, carbs: 6.3, protein: 12.7, fat: 12.7, fiber: 0,
+    rawCalories: 190, rawCarbs: 6.3, rawProtein: 12.7, rawFat: 12.7, rawFiber: 0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 皮蛋 — 成品
+  { id: "century-egg", name: "皮蛋", nameEn: "Century Egg", category: "蛋奶", emoji: "🥚",
+    calories: 178, carbs: 4.5, protein: 14.2, fat: 10.7, fiber: 0,
+    rawCalories: 178, rawCarbs: 4.5, rawProtein: 14.2, rawFat: 10.7, rawFiber: 0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 鹌鹑蛋 — 生熟一体
+  { id: "quail-egg", name: "鹌鹑蛋", nameEn: "Quail Egg", category: "蛋奶", emoji: "🥚",
+    calories: 160, carbs: 2.1, protein: 12.8, fat: 11.1, fiber: 0,
+    rawCalories: 160, rawCarbs: 2.1, rawProtein: 12.8, rawFat: 11.1, rawFiber: 0,
+    basisDefault: "raw", cookFactor: 1 },
+
+  // ===== 常见中式蔬菜 (Chinese Vegetables) =====
+  // 大白菜 — 生熟一致
+  { id: "napa-cabbage", name: "大白菜", nameEn: "Napa Cabbage", category: "蔬菜", emoji: "🥬",
+    calories: 20, carbs: 3.1, protein: 1.5, fat: 0.1, fiber: 0.8,
+    rawCalories: 20, rawCarbs: 3.1, rawProtein: 1.5, rawFat: 0.1, rawFiber: 0.8,
+    basisDefault: "raw", cookFactor: 1 },
+  // 莲藕 — 生熟一致
+  { id: "lotus-root", name: "莲藕", nameEn: "Lotus Root", category: "蔬菜", emoji: "🪷",
+    calories: 79, carbs: 17.2, protein: 1.7, fat: 0.1, fiber: 4.9,
+    rawCalories: 79, rawCarbs: 17.2, rawProtein: 1.7, rawFat: 0.1, rawFiber: 4.9,
+    basisDefault: "raw", cookFactor: 1 },
+  // 山药 — 生熟一致
+  { id: "yam", name: "山药", nameEn: "Chinese Yam", category: "蔬菜", emoji: "🥔",
+    calories: 57, carbs: 12.4, protein: 1.9, fat: 0.2, fiber: 0.8,
+    rawCalories: 57, rawCarbs: 12.4, rawProtein: 1.9, rawFat: 0.2, rawFiber: 0.8,
+    basisDefault: "raw", cookFactor: 1 },
+  // 豆角 — 生熟一致
+  { id: "green-bean", name: "豆角", nameEn: "Green Bean", category: "蔬菜", emoji: "🫛",
+    calories: 30, carbs: 5.7, protein: 2.5, fat: 0.2, fiber: 1.5,
+    rawCalories: 30, rawCarbs: 5.7, rawProtein: 2.5, rawFat: 0.2, rawFiber: 1.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 白萝卜 — 生熟一致
+  { id: "daikon", name: "白萝卜", nameEn: "Daikon Radish", category: "蔬菜", emoji: "🥬",
+    calories: 21, carbs: 4.6, protein: 0.9, fat: 0.1, fiber: 1.0,
+    rawCalories: 21, rawCarbs: 4.6, rawProtein: 0.9, rawFat: 0.1, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 木耳(水发) — 生熟一致
+  { id: "wood-ear", name: "木耳", nameEn: "Wood Ear Mushroom", category: "蔬菜", emoji: "🍄",
+    calories: 27, carbs: 6.0, protein: 1.5, fat: 0.2, fiber: 2.6,
+    rawCalories: 27, rawCarbs: 6.0, rawProtein: 1.5, rawFat: 0.2, rawFiber: 2.6,
+    basisDefault: "raw", cookFactor: 1 },
+  // 海带 — 生熟一致
+  { id: "kelp", name: "海带", nameEn: "Kelp", category: "蔬菜", emoji: "🌿",
+    calories: 17, carbs: 3.0, protein: 1.2, fat: 0.1, fiber: 1.3,
+    rawCalories: 17, rawCarbs: 3.0, rawProtein: 1.2, rawFat: 0.1, rawFiber: 1.3,
+    basisDefault: "raw", cookFactor: 1 },
+  // 韭菜 — 生熟一致
+  { id: "chinese-chive", name: "韭菜", nameEn: "Chinese Chive", category: "蔬菜", emoji: "🥬",
+    calories: 26, carbs: 4.6, protein: 2.4, fat: 0.4, fiber: 1.4,
+    rawCalories: 26, rawCarbs: 4.6, rawProtein: 2.4, rawFat: 0.4, rawFiber: 1.4,
+    basisDefault: "raw", cookFactor: 1 },
+  // 苦瓜 — 生熟一致
+  { id: "bitter-melon", name: "苦瓜", nameEn: "Bitter Melon", category: "蔬菜", emoji: "🥒",
+    calories: 22, carbs: 4.9, protein: 1.0, fat: 0.1, fiber: 1.4,
+    rawCalories: 22, rawCarbs: 4.9, rawProtein: 1.0, rawFat: 0.1, rawFiber: 1.4,
+    basisDefault: "raw", cookFactor: 1 },
+  // 冬瓜 — 生熟一致
+  { id: "winter-melon", name: "冬瓜", nameEn: "Winter Melon", category: "蔬菜", emoji: "🥒",
+    calories: 12, carbs: 2.6, protein: 0.4, fat: 0.2, fiber: 0.7,
+    rawCalories: 12, rawCarbs: 2.6, rawProtein: 0.4, rawFat: 0.2, rawFiber: 0.7,
+    basisDefault: "raw", cookFactor: 1 },
+  // 豆芽 — 生熟一致
+  { id: "bean-sprout", name: "豆芽", nameEn: "Bean Sprout", category: "蔬菜", emoji: "🌱",
+    calories: 18, carbs: 2.5, protein: 2.6, fat: 0.2, fiber: 1.0,
+    rawCalories: 18, rawCarbs: 2.5, rawProtein: 2.6, rawFat: 0.2, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 1 },
+
+  // ===== 豆制品/坚果干果 (Soy Products & Dried Fruits) =====
+  // 豆腐脑 — 成品
+  { id: "tofu-pudding", name: "豆腐脑", nameEn: "Tofu Pudding", category: "豆类坚果", emoji: "🥣",
+    calories: 47, carbs: 3.0, protein: 5.0, fat: 1.8, fiber: 0.4,
+    rawCalories: 47, rawCarbs: 3.0, rawProtein: 5.0, rawFat: 1.8, rawFiber: 0.4,
+    basisDefault: "raw", cookFactor: 1 },
+  // 腐竹(干) — 干货，泡发 cookFactor ≈ 3
+  { id: "yuba", name: "腐竹", nameEn: "Yuba (Dry)", category: "豆类坚果", emoji: "🍜",
+    calories: 459, carbs: 22.0, protein: 44.0, fat: 21.0, fiber: 1.0,
+    rawCalories: 459, rawCarbs: 22.0, rawProtein: 44.0, rawFat: 21.0, rawFiber: 1.0,
+    basisDefault: "raw", cookFactor: 3.0 },
+  // 豆皮 — 成品
+  { id: "tofu-skin", name: "豆皮", nameEn: "Tofu Skin", category: "豆类坚果", emoji: "🧈",
+    calories: 409, carbs: 19.0, protein: 44.0, fat: 18.0, fiber: 0.5,
+    rawCalories: 409, rawCarbs: 19.0, rawProtein: 44.0, rawFat: 18.0, rawFiber: 0.5,
+    basisDefault: "raw", cookFactor: 1 },
+  // 芝麻 — 成品
+  { id: "sesame", name: "芝麻", nameEn: "Sesame", category: "豆类坚果", emoji: "🌰",
+    calories: 573, carbs: 24.0, protein: 19.0, fat: 50.0, fiber: 11.0,
+    rawCalories: 573, rawCarbs: 24.0, rawProtein: 19.0, rawFat: 50.0, rawFiber: 11.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 红枣(干) — 干货
+  { id: "red-date", name: "红枣(干)", nameEn: "Red Date (Dried)", category: "豆类坚果", emoji: "🔴",
+    calories: 277, carbs: 72.0, protein: 3.2, fat: 0.5, fiber: 6.2,
+    rawCalories: 277, rawCarbs: 72.0, rawProtein: 3.2, rawFat: 0.5, rawFiber: 6.2,
+    basisDefault: "raw", cookFactor: 1 },
+  // 葡萄干 — 干货
+  { id: "raisin", name: "葡萄干", nameEn: "Raisin", category: "豆类坚果", emoji: "🍇",
+    calories: 299, carbs: 79.0, protein: 3.1, fat: 0.5, fiber: 3.7,
+    rawCalories: 299, rawCarbs: 79.0, rawProtein: 3.1, rawFat: 0.5, rawFiber: 3.7,
+    basisDefault: "raw", cookFactor: 1 },
+  // 栗子(熟) — 成品
+  { id: "chestnut", name: "栗子(熟)", nameEn: "Chestnut (Roasted)", category: "豆类坚果", emoji: "🌰",
+    calories: 214, carbs: 46.0, protein: 4.8, fat: 1.5, fiber: 1.7,
+    rawCalories: 214, rawCarbs: 46.0, rawProtein: 4.8, rawFat: 1.5, rawFiber: 1.7,
+    basisDefault: "raw", cookFactor: 1 },
+  // 葵花籽(仁) — 成品
+  { id: "sunflower-seed", name: "葵花籽", nameEn: "Sunflower Seed", category: "豆类坚果", emoji: "🌻",
+    calories: 606, carbs: 12.5, protein: 22.6, fat: 52.8, fiber: 7.0,
+    rawCalories: 606, rawCarbs: 12.5, rawProtein: 22.6, rawFat: 52.8, rawFiber: 7.0,
+    basisDefault: "raw", cookFactor: 1 },
+  // 桂圆(干) — 干货
+  { id: "longan-dried", name: "桂圆(干)", nameEn: "Dried Longan", category: "豆类坚果", emoji: "🟤",
+    calories: 282, carbs: 71.0, protein: 4.6, fat: 1.0, fiber: 3.0,
+    rawCalories: 282, rawCarbs: 71.0, rawProtein: 4.6, rawFat: 1.0, rawFiber: 3.0,
+    basisDefault: "raw", cookFactor: 1 },
 ];
 
 export function searchFoods(query: string): Food[] {
