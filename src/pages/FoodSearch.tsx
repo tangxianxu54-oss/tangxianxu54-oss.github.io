@@ -4,11 +4,13 @@ import { foods, CATEGORIES, type Food, type WeightBasis } from "@/data/foods";
 import FoodCard from "@/components/FoodCard";
 import AddFoodModal from "@/components/AddFoodModal";
 import { useStore, type MealType, type CustomFood } from "@/store/useStore";
+import { pinyinMatch } from "@/utils/pinyin";
 
 export default function FoodSearch() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("全部");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingFood, setEditingFood] = useState<CustomFood | null>(null);
 
   const customFoods = useStore((s) => s.customFoods);
   const removeCustomFood = useStore((s) => s.removeCustomFood);
@@ -28,7 +30,9 @@ export default function FoodSearch() {
         (f) =>
           f.name.toLowerCase().includes(q) ||
           f.nameEn.toLowerCase().includes(q) ||
-          f.category.includes(q)
+          f.category.includes(q) ||
+          // 拼音首字母匹配（如 "jxr" → 鸡胸肉）
+          pinyinMatch(q, f.name)
       );
     }
     if (activeCategory !== "全部") {
@@ -73,6 +77,21 @@ export default function FoodSearch() {
   const isCustom = (food: Food): food is CustomFood =>
     "isCustom" in food && food.isCustom === true;
 
+  const openAddModal = () => {
+    setEditingFood(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (food: CustomFood) => {
+    setEditingFood(food);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingFood(null);
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Hero 区 */}
@@ -85,7 +104,7 @@ export default function FoodSearch() {
           食物 <span className="text-gradient-flame">热量</span> 与营养查询
         </h1>
         <p className="mt-2 text-sm text-white/50">
-          搜索 {allFoods.length} 种食物（含 {customFoods.length} 种自定义），查看碳水、蛋白质、脂肪及膳食纤维
+          搜索 {allFoods.length} 种食物（含 {customFoods.length} 种自定义），支持中英文及拼音首字母
         </p>
       </section>
 
@@ -97,12 +116,12 @@ export default function FoodSearch() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索食物名称（中英文均可）..."
+            placeholder="搜索食物（中文 / 英文 / 拼音首字母 如 jxr）..."
             className="w-full rounded-2xl border border-white/10 bg-charcoal-light/60 py-3.5 pl-12 pr-4 text-cream outline-none backdrop-blur-sm transition-all placeholder:text-white/30 focus:border-flame focus:ring-2 focus:ring-flame/20"
           />
         </div>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={openAddModal}
           className="flex flex-shrink-0 items-center gap-1.5 rounded-2xl bg-gradient-to-r from-mint to-mint-dark px-5 py-3.5 font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
         >
           <Plus className="h-5 w-5" />
@@ -147,14 +166,21 @@ export default function FoodSearch() {
                 onDelete={
                   isCustom(food) ? () => removeCustomFood(food.id) : undefined
                 }
+                onEdit={
+                  isCustom(food) ? () => openEditModal(food) : undefined
+                }
               />
             ))}
           </div>
         </>
       )}
 
-      {/* 添加食物弹窗 */}
-      <AddFoodModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      {/* 添加/编辑食物弹窗 */}
+      <AddFoodModal
+        open={modalOpen}
+        onClose={closeModal}
+        initialFood={editingFood}
+      />
     </div>
   );
 }
