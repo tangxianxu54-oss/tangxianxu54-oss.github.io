@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Plus, Check, Link, Unlink } from "lucide-react";
 import { CATEGORIES, type WeightBasis } from "@/data/foods";
-import { useStore } from "@/store/useStore";
+import { useStore, type CustomFood } from "@/store/useStore";
 
 interface AddFoodModalProps {
   open: boolean;
   onClose: () => void;
+  initialFood?: CustomFood | null;
 }
 
-const EMOJI_CHOICES = ["🍽️", "🥘", "🍳", "🥗", "🧆", "🍔", "🥪", "🌯", "🧀", "🥩", "🐟", "🥚", "🥛", "🍞", "🍜", "🥣", "🥗", "🍎", "🍌", "🥑", "🌰", "🥜", "💪", "🧂", "🍯"];
+const EMOJI_CHOICES = ["🍽️", "🥘", "🍳", "🥗", "🧆", "🍔", "🥪", "🌯", "🧀", "🥩", "🐟", "🥚", "🥛", "🍞", "🍜", "🥣", "🍎", "🍌", "🥑", "🌰", "🥜", "💪", "🧂", "🍯"];
 
 type FormState = {
   name: string;
@@ -54,10 +55,41 @@ const initialForm = (): FormState => ({
   syncRaw: true,
 });
 
-export default function AddFoodModal({ open, onClose }: AddFoodModalProps) {
+const fromCustomFood = (f: CustomFood): FormState => ({
+  name: f.name,
+  nameEn: f.nameEn,
+  category: f.category,
+  emoji: f.emoji,
+  calories: String(f.calories),
+  carbs: String(f.carbs),
+  protein: String(f.protein),
+  fat: String(f.fat),
+  fiber: String(f.fiber),
+  rawCalories: String(f.rawCalories ?? f.calories),
+  rawCarbs: String(f.rawCarbs ?? f.carbs),
+  rawProtein: String(f.rawProtein ?? f.protein),
+  rawFat: String(f.rawFat ?? f.fat),
+  rawFiber: String(f.rawFiber ?? f.fiber),
+  basisDefault: f.basisDefault ?? "raw",
+  cookFactor: String(f.cookFactor ?? 1),
+  syncRaw: false,
+});
+
+export default function AddFoodModal({ open, onClose, initialFood }: AddFoodModalProps) {
   const addCustomFood = useStore((s) => s.addCustomFood);
+  const updateCustomFood = useStore((s) => s.updateCustomFood);
   const [form, setForm] = useState<FormState>(initialForm());
   const [error, setError] = useState("");
+
+  const isEditing = !!initialFood;
+
+  // 打开弹窗时根据 initialFood 预填表单
+  useEffect(() => {
+    if (open) {
+      setForm(initialFood ? fromCustomFood(initialFood) : initialForm());
+      setError("");
+    }
+  }, [open, initialFood]);
 
   if (!open) return null;
 
@@ -120,7 +152,7 @@ export default function AddFoodModal({ open, onClose }: AddFoodModalProps) {
     let cookFactor = Number(form.cookFactor);
     if (!cookFactor || isNaN(cookFactor) || cookFactor <= 0) cookFactor = 1;
 
-    addCustomFood({
+    const payload = {
       name: form.name.trim(),
       nameEn: form.nameEn.trim() || form.name.trim(),
       category: form.category,
@@ -137,7 +169,13 @@ export default function AddFoodModal({ open, onClose }: AddFoodModalProps) {
       rawFiber: raw.fiber,
       basisDefault: form.basisDefault,
       cookFactor,
-    });
+    };
+
+    if (isEditing && initialFood) {
+      updateCustomFood(initialFood.id, payload);
+    } else {
+      addCustomFood(payload);
+    }
 
     setForm(initialForm());
     onClose();
@@ -166,7 +204,9 @@ export default function AddFoodModal({ open, onClose }: AddFoodModalProps) {
             <Plus className="h-5 w-5 text-charcoal" />
           </div>
           <div>
-            <h2 className="font-display text-2xl tracking-wide text-cream">添加自定义食物</h2>
+            <h2 className="font-display text-2xl tracking-wide text-cream">
+              {isEditing ? "编辑自定义食物" : "添加自定义食物"}
+            </h2>
             <p className="text-xs text-white/40">数据以每 100g 为基准，保存后可在列表中搜索使用</p>
           </div>
         </div>
@@ -433,7 +473,7 @@ export default function AddFoodModal({ open, onClose }: AddFoodModalProps) {
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-mint to-mint-dark py-3 font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
             >
               <Check className="h-4 w-4" />
-              保存食物
+              {isEditing ? "保存修改" : "保存食物"}
             </button>
           </div>
         </div>
