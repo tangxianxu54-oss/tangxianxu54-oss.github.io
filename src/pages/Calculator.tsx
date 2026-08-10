@@ -1,18 +1,25 @@
 import { useState } from "react";
-import { Calculator as CalcIcon, User, Activity, Zap } from "lucide-react";
+import { Calculator as CalcIcon, User, Activity, Zap, Settings2 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import {
   ACTIVITY_OPTIONS,
   calculateBMR,
   calculateTDEE,
+  MACRO_PRESETS,
   type Gender,
   type ActivityLevel,
+  type MacroPresetId,
+  type MacroRatios,
 } from "@/utils/nutrition";
 
 export default function Calculator() {
   const profile = useStore((s) => s.profile);
   const targets = useStore((s) => s.targets);
   const updateProfile = useStore((s) => s.updateProfile);
+  const macroPresetId = useStore((s) => s.macroPresetId);
+  const customRatios = useStore((s) => s.customRatios);
+  const setMacroPreset = useStore((s) => s.setMacroPreset);
+  const setCustomRatios = useStore((s) => s.setCustomRatios);
 
   const [form, setForm] = useState({
     gender: profile?.gender ?? "male",
@@ -22,15 +29,58 @@ export default function Calculator() {
     activityLevel: profile?.activityLevel ?? "moderate",
   });
 
+  // 自定义比例的本地输入
+  const [showCustom, setShowCustom] = useState(customRatios !== null);
+  const [customForm, setCustomForm] = useState({
+    protein: Math.round((customRatios?.protein ?? 0.3) * 100),
+    carbs: Math.round((customRatios?.carbs ?? 0.45) * 100),
+    fat: Math.round((customRatios?.fat ?? 0.25) * 100),
+  });
+
+  const activeRatios: MacroRatios = customRatios ?? {
+    protein: MACRO_PRESETS.find((p) => p.id === macroPresetId)?.proteinRatio ?? 0.3,
+    carbs: MACRO_PRESETS.find((p) => p.id === macroPresetId)?.carbsRatio ?? 0.45,
+    fat: MACRO_PRESETS.find((p) => p.id === macroPresetId)?.fatRatio ?? 0.25,
+  };
+
   const bmr = calculateBMR(form as never);
   const tdee = calculateTDEE(form as never);
-  const protein = Math.round((tdee * 0.3) / 4);
-  const carbs = Math.round((tdee * 0.45) / 4);
-  const fat = Math.round((tdee * 0.25) / 9);
+  const protein = Math.round((tdee * activeRatios.protein) / 4);
+  const carbs = Math.round((tdee * activeRatios.carbs) / 4);
+  const fat = Math.round((tdee * activeRatios.fat) / 9);
+  const fiber = Math.round((tdee / 1000) * 14);
 
   const handleSave = () => {
     updateProfile(form as never);
+    if (showCustom) {
+      const r = { protein: customForm.protein / 100, carbs: customForm.carbs / 100, fat: customForm.fat / 100 };
+      const sum = r.protein + r.carbs + r.fat;
+      if (Math.abs(sum - 1) < 0.02) {
+        setCustomRatios(r);
+      }
+    } else {
+      setMacroPreset(macroPresetId);
+    }
   };
+
+  const handlePresetClick = (id: MacroPresetId) => {
+    setShowCustom(false);
+    setMacroPreset(id);
+  };
+
+  const handleCustomToggle = () => {
+    setShowCustom(true);
+    const sum = customForm.protein + customForm.carbs + customForm.fat;
+    if (Math.abs(sum - 100) < 2) {
+      setCustomRatios({
+        protein: customForm.protein / 100,
+        carbs: customForm.carbs / 100,
+        fat: customForm.fat / 100,
+      });
+    }
+  };
+
+  const customSum = customForm.protein + customForm.carbs + customForm.fat;
 
   return (
     <div className="animate-fade-in">
@@ -134,6 +184,63 @@ export default function Calculator() {
             </div>
           </div>
 
+          {/* 营养比例预设 */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block text-sm text-white/60">营养比例方案</label>
+              <button
+                onClick={handleCustomToggle}
+                className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] transition-all ${
+                  showCustom
+                    ? "border-flame/30 bg-flame/10 text-flame-light"
+                    : "border-white/10 bg-white/5 text-white/40 hover:text-white/70"
+                }`}
+              >
+                <Settings2 className="h-3 w-3" />
+                自定义
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {MACRO_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetClick(preset.id)}
+                  disabled={showCustom}
+                  className={`rounded-xl border px-3 py-2 text-left transition-all disabled:opacity-40 ${
+                    !showCustom && macroPresetId === preset.id
+                      ? "border-mint bg-mint/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <p className={`text-xs font-medium ${!showCustom && macroPresetId === preset.id ? "text-mint-light" : "text-cream"}`}>
+                    {preset.label}
+                  </p>
+                  <p className="text-[10px] text-white/40">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* 自定义比例输入 */}
+            {showCustom && (
+              <div className="mt-3 animate-slide-up rounded-xl border border-flame/20 bg-flame/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs text-white/50">自定义比例（%）</span>
+                  <span className={`text-xs font-medium ${Math.abs(customSum - 100) < 2 ? "text-mint-light" : "text-flame-light"}`}>
+                    合计 {customSum}%
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <RatioInput label="蛋白质" value={customForm.protein} color="text-protein" onChange={(v) => setCustomForm({ ...customForm, protein: v })} />
+                  <RatioInput label="碳水" value={customForm.carbs} color="text-carb" onChange={(v) => setCustomForm({ ...customForm, carbs: v })} />
+                  <RatioInput label="脂肪" value={customForm.fat} color="text-fat" onChange={(v) => setCustomForm({ ...customForm, fat: v })} />
+                </div>
+                {Math.abs(customSum - 100) >= 2 && (
+                  <p className="mt-2 text-[10px] text-flame-light">三大营养素比例之和应为 100%</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleSave}
             className="w-full rounded-xl bg-gradient-to-r from-flame to-flame-dark py-3 font-medium text-white shadow-lg shadow-flame/30 transition-all hover:shadow-flame/50"
@@ -188,13 +295,24 @@ export default function Calculator() {
               宏量营养素目标
             </h3>
             <div className="grid grid-cols-3 gap-3">
-              <MacroBox label="蛋白质" value={protein} unit="g" color="text-protein" bg="bg-protein/10" dot="bg-protein" ratio="30%" />
-              <MacroBox label="碳水" value={carbs} unit="g" color="text-carb" bg="bg-carb/10" dot="bg-carb" ratio="45%" />
-              <MacroBox label="脂肪" value={fat} unit="g" color="text-fat" bg="bg-fat/10" dot="bg-fat" ratio="25%" />
+              <MacroBox label="蛋白质" value={protein} unit="g" color="text-protein" bg="bg-protein/10" dot="bg-protein" ratio={`${Math.round(activeRatios.protein * 100)}%`} />
+              <MacroBox label="碳水" value={carbs} unit="g" color="text-carb" bg="bg-carb/10" dot="bg-carb" ratio={`${Math.round(activeRatios.carbs * 100)}%`} />
+              <MacroBox label="脂肪" value={fat} unit="g" color="text-fat" bg="bg-fat/10" dot="bg-fat" ratio={`${Math.round(activeRatios.fat * 100)}%`} />
             </div>
-            <div className="mt-4 rounded-xl bg-white/5 p-3 text-xs text-white/50">
+            {/* 膳食纤维目标 */}
+            <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-mint" />
+                <span className="text-xs text-white/50">膳食纤维目标</span>
+              </div>
+              <span className="font-display text-lg text-mint-light">
+                {fiber} <span className="text-xs text-white/40">g / 天</span>
+              </span>
+            </div>
+            <div className="mt-3 rounded-xl bg-white/5 p-3 text-xs text-white/50">
               <p className="mb-1 font-medium text-white/70">营养素能量换算：</p>
               <p>· 蛋白质 1g = 4 kcal · 碳水 1g = 4 kcal · 脂肪 1g = 9 kcal</p>
+              <p className="mt-1">· 膳食纤维目标按 14g / 1000kcal 计算</p>
             </div>
           </div>
 
@@ -248,6 +366,32 @@ function NumberField({
         />
         <span className="text-sm text-white/40">{unit}</span>
       </div>
+    </div>
+  );
+}
+
+function RatioInput({
+  label,
+  value,
+  color,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="text-center">
+      <label className="mb-1 block text-[10px] text-white/40">{label}</label>
+      <input
+        type="number"
+        min={0}
+        max={100}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        className={`w-full rounded-lg border border-white/10 bg-charcoal-light/60 px-2 py-1.5 text-center text-sm outline-none focus:border-flame ${color}`}
+      />
     </div>
   );
 }
