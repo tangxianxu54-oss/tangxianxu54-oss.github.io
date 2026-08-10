@@ -33,6 +33,32 @@ export interface NutritionTargets {
   protein: number; // g
   carbs: number; // g
   fat: number; // g
+  fiber: number; // g 膳食纤维目标
+}
+
+// ===== 营养比例预设方案 =====
+export type MacroPresetId = "balanced" | "bulk" | "cut" | "keto";
+
+export interface MacroPreset {
+  id: MacroPresetId;
+  label: string;
+  description: string;
+  proteinRatio: number; // 蛋白质供能占比
+  carbsRatio: number;   // 碳水供能占比
+  fatRatio: number;     // 脂肪供能占比
+}
+
+export const MACRO_PRESETS: MacroPreset[] = [
+  { id: "balanced", label: "均衡饮食", description: "蛋白30% · 碳水45% · 脂肪25%", proteinRatio: 0.3, carbsRatio: 0.45, fatRatio: 0.25 },
+  { id: "bulk",     label: "增肌模式", description: "蛋白30% · 碳水50% · 脂肪20%", proteinRatio: 0.3, carbsRatio: 0.5,  fatRatio: 0.2  },
+  { id: "cut",      label: "减脂模式", description: "蛋白40% · 碳水35% · 脂肪25%", proteinRatio: 0.4, carbsRatio: 0.35, fatRatio: 0.25 },
+  { id: "keto",     label: "生酮模式", description: "蛋白25% · 碳水5% · 脂肪70%",  proteinRatio: 0.25, carbsRatio: 0.05, fatRatio: 0.7  },
+];
+
+export interface MacroRatios {
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 // Mifflin-St Jeor 公式计算基础代谢率 BMR
@@ -49,16 +75,21 @@ export function calculateTDEE(profile: UserProfile): number {
   return Math.round(bmr * factor);
 }
 
-// 计算宏量营养素目标（健身人群比例：蛋白质30% 碳水45% 脂肪25%）
-export function calculateTargets(profile: UserProfile): NutritionTargets {
+// 计算宏量营养素目标，支持自定义比例；膳食纤维按 14g/1000kcal 计算
+export function calculateTargets(
+  profile: UserProfile,
+  ratios?: MacroRatios
+): NutritionTargets {
   const bmr = calculateBMR(profile);
   const tdee = calculateTDEE(profile);
+  const r = ratios ?? { protein: 0.3, carbs: 0.45, fat: 0.25 };
   return {
     bmr,
     tdee,
-    protein: Math.round((tdee * 0.3) / 4), // 4 kcal/g
-    carbs: Math.round((tdee * 0.45) / 4), // 4 kcal/g
-    fat: Math.round((tdee * 0.25) / 9), // 9 kcal/g
+    protein: Math.round((tdee * r.protein) / 4), // 4 kcal/g
+    carbs: Math.round((tdee * r.carbs) / 4),     // 4 kcal/g
+    fat: Math.round((tdee * r.fat) / 9),         // 9 kcal/g
+    fiber: Math.round((tdee / 1000) * 14),       // 14g / 1000kcal
   };
 }
 
