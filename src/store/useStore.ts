@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { UserProfile, ActivityLevel, NutritionTargets } from "@/utils/nutrition";
-import { calculateTargets } from "@/utils/nutrition";
+import type { UserProfile, ActivityLevel, NutritionTargets, MacroPresetId, MacroRatios } from "@/utils/nutrition";
+import { calculateTargets, MACRO_PRESETS } from "@/utils/nutrition";
 import type { Food, WeightBasis } from "@/data/foods";
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -34,19 +34,53 @@ export interface NutritionTotals {
   fiber: number;
 }
 
+// 生成 YYYY-MM-DD 格式的日期 key（本地时区）
+export function dateKey(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 interface StoreState {
-  entries: DiaryEntry[];
+  // 按日期分组的餐单记录
+  entriesByDate: Record<string, DiaryEntry[]>;
+  // 按日期记录的饮水量 (ml)
+  waterByDate: Record<string, number>;
   profile: UserProfile | null;
   targets: NutritionTargets | null;
+  macroPresetId: MacroPresetId;
+  customRatios: MacroRatios | null;
   customFoods: CustomFood[];
-  addEntry: (entry: Omit<DiaryEntry, "id" | "addedAt">) => void;
-  removeEntry: (id: string) => void;
-  clearEntries: () => void;
+
+  // 餐单操作（带日期）
+  addEntry: (entry: Omit<DiaryEntry, "id" | "addedAt">, date?: string) => void;
+  removeEntry: (id: string, date?: string) => void;
+  updateEntryGrams: (id: string, grams: number, date?: string) => void;
+  clearEntries: (date?: string) => void;
+  getEntries: (date?: string) => DiaryEntry[];
+
+  // 饮水操作
+  addWater: (ml: number, date?: string) => void;
+  setWater: (ml: number, date?: string) => void;
+  getWater: (date?: string) => number;
+
+  // 个人资料与营养目标
   setProfile: (profile: UserProfile) => void;
   updateProfile: (partial: Partial<UserProfile>) => void;
   clearProfile: () => void;
+  setMacroPreset: (id: MacroPresetId) => void;
+  setCustomRatios: (ratios: MacroRatios) => void;
+  getActiveRatios: () => MacroRatios;
+
+  // 自定义食物
   addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => void;
+  updateCustomFood: (id: string, food: Omit<CustomFood, "id" | "isCustom">) => void;
   removeCustomFood: (id: string) => void;
+
+  // 数据导入导出
+  exportData: () => string;
+  importData: (json: string) => boolean;
 }
 
 const defaultProfile: UserProfile = {
@@ -57,33 +91,163 @@ const defaultProfile: UserProfile = {
   activityLevel: "moderate" as ActivityLevel,
 };
 
+function getRatios(presetId: MacroPresetId, custom: MacroRatios | null): MacroRatios {
+  if (custom) return custom;
+  const preset = MACRO_PRESETS.find((p) => p.id === presetId) ?? MACRO_PRESETS[0];
+  return { protein: preset.proteinRatio, carbs: preset.carbsRatio, fat: preset.fatRatio };
+}
+
+function recomputeTargets(profile: UserProfile, presetId: MacroPresetId, custom: MacroRatios | null): NutritionTargets {
+  return calculateTargets(profile, getRatios(presetId, custom));
+}
+
 export const useStore = create<StoreState>()(
   persist(
-    (set) => ({
-      entries: [],
+    (set, get) => ({
+      entriesByDate: {},
+      waterByDate: {},
       profile: defaultProfile,
-      targets: calculateTargets(defaultProfile),
+      targets: recomputeTargets(defaultProfile, "balanced", null),
+      macroPresetId: "balanced",
+      customRatios: null,
       customFoods: [],
-      addEntry: (entry) =>
+
+      addEntry: (entry, date) => {
+        const key = date ?? dateKey();
         set((state) => ({
-          entries: [
-            ...state.entries,
-            { ...entry, id: crypto.randomUUID(), addedAt: Date.now() },
-          ],
-        })),
-      removeEntry: (id) =>
+          entriesByDate: {
+            ...state.entriesByDate,
+            [key]: [
+              ...(state.entriesByDate[key] ?? []),
+              { ...entry, id: crypto.randomUUID(), addedAt: Date.now() },
+            ],
+          },
+        }));
+      },
+
+      removeEntry: (id, date) => {
+        const key = date ?? dateKey();
         set((state) => ({
-          entries: state.entries.filter((e) => e.id !== id),
-        })),
-      clearEntries: () => set({ entries: [] }),
+          entriesByDate: {
+            ...state.entriesByDate,
+            [key]: (state.entriesByDate[key] ?? []).filter((e) => e.id !== id),
+          },
+        }));
+      },
+
+      updateEntryGrams: (id, grams, date) => {
+        const key = date ?? dateKey();
+        const entries = get().entriesByDate[key] ?? [];
+        const entry = entries.find((e) => e.id === id);
+        if (!entry || grams <= 0) return;
+        // 按原始每100g营养重新计算
+        const ratio = grams / 100;
+        const originalRatio = entry.grams > 0 ? 1 / (entry.grams / 100) : 0;
+        const per100 = {
+          calories: entry.calories * originalRatio,
+          carbs: entry.carbs * originalRatio,
+          protein: entry.protein * originalRatio,
+          fat: entry.fat * originalRatio,
+          fiber: entry.fiber * originalRatio,
+        };
+        set((state) => ({
+          entriesByDate: {
+            ...state.entriesByDate,
+            [key]: (state.entriesByDate[key] ?? []).map((e) =>
+              e.id === id
+                ? {
+                    ...e,
+                    grams,
+                    calories: Math.round(per100.calories * ratio),
+                    carbs: Math.round(per100.carbs * ratio * 10) / 10,
+                    protein: Math.round(per100.protein * ratio * 10) / 10,
+                    fat: Math.round(per100.fat * ratio * 10) / 10,
+                    fiber: Math.round(per100.fiber * ratio * 10) / 10,
+                  }
+                : e
+            ),
+          },
+        }));
+      },
+
+      clearEntries: (date) => {
+        const key = date ?? dateKey();
+        set((state) => {
+          const next = { ...state.entriesByDate };
+          delete next[key];
+          return { entriesByDate: next };
+        });
+      },
+
+      getEntries: (date) => {
+        const key = date ?? dateKey();
+        return get().entriesByDate[key] ?? [];
+      },
+
+      addWater: (ml, date) => {
+        const key = date ?? dateKey();
+        set((state) => ({
+          waterByDate: {
+            ...state.waterByDate,
+            [key]: (state.waterByDate[key] ?? 0) + ml,
+          },
+        }));
+      },
+
+      setWater: (ml, date) => {
+        const key = date ?? dateKey();
+        set((state) => ({
+          waterByDate: {
+            ...state.waterByDate,
+            [key]: Math.max(0, ml),
+          },
+        }));
+      },
+
+      getWater: (date) => {
+        const key = date ?? dateKey();
+        return get().waterByDate[key] ?? 0;
+      },
+
       setProfile: (profile) =>
-        set({ profile, targets: calculateTargets(profile) }),
+        set((state) => ({
+          profile,
+          targets: recomputeTargets(profile, state.macroPresetId, state.customRatios),
+        })),
+
       updateProfile: (partial) =>
         set((state) => {
           const profile = { ...state.profile!, ...partial };
-          return { profile, targets: calculateTargets(profile) };
+          return {
+            profile,
+            targets: recomputeTargets(profile, state.macroPresetId, state.customRatios),
+          };
         }),
+
       clearProfile: () => set({ profile: null, targets: null }),
+
+      setMacroPreset: (id) =>
+        set((state) => ({
+          macroPresetId: id,
+          customRatios: null,
+          targets: state.profile
+            ? recomputeTargets(state.profile, id, null)
+            : state.targets,
+        })),
+
+      setCustomRatios: (ratios) =>
+        set((state) => ({
+          customRatios: ratios,
+          targets: state.profile
+            ? recomputeTargets(state.profile, state.macroPresetId, ratios)
+            : state.targets,
+        })),
+
+      getActiveRatios: () => {
+        const { macroPresetId, customRatios } = get();
+        return getRatios(macroPresetId, customRatios);
+      },
+
       addCustomFood: (food) =>
         set((state) => ({
           customFoods: [
@@ -91,25 +255,91 @@ export const useStore = create<StoreState>()(
             { ...food, id: `custom-${crypto.randomUUID()}`, isCustom: true },
           ],
         })),
+
+      updateCustomFood: (id, food) =>
+        set((state) => ({
+          customFoods: state.customFoods.map((f) =>
+            f.id === id ? { ...f, ...food, id, isCustom: true } : f
+          ),
+        })),
+
       removeCustomFood: (id) =>
         set((state) => ({
           customFoods: state.customFoods.filter((f) => f.id !== id),
         })),
+
+      exportData: () => {
+        const state = get();
+        return JSON.stringify(
+          {
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            entriesByDate: state.entriesByDate,
+            waterByDate: state.waterByDate,
+            profile: state.profile,
+            macroPresetId: state.macroPresetId,
+            customRatios: state.customRatios,
+            customFoods: state.customFoods,
+          },
+          null,
+          2
+        );
+      },
+
+      importData: (json) => {
+        try {
+          const data = JSON.parse(json);
+          if (!data || typeof data !== "object") return false;
+          set((state) => ({
+            entriesByDate: data.entriesByDate ?? state.entriesByDate,
+            waterByDate: data.waterByDate ?? state.waterByDate,
+            profile: data.profile ?? state.profile,
+            macroPresetId: data.macroPresetId ?? state.macroPresetId,
+            customRatios: data.customRatios ?? state.customRatios,
+            customFoods: Array.isArray(data.customFoods) ? data.customFoods : state.customFoods,
+            targets:
+              data.profile ?? state.profile
+                ? recomputeTargets(
+                    data.profile ?? state.profile!,
+                    data.macroPresetId ?? state.macroPresetId,
+                    data.customRatios ?? state.customRatios
+                  )
+                : state.targets,
+          }));
+          return true;
+        } catch {
+          return false;
+        }
+      },
     }),
     {
       name: "fitness-calorie-store",
-      // 版本迁移：给历史 entries 补上默认 weightBasis = "cooked"（老版本无此字段时最接近原来的行为）
+      version: 2,
+      // 版本迁移：v1 → v2
       migrate: (persistedState: unknown, version: number) => {
-        const state = (persistedState ?? {}) as Partial<StoreState>;
-        if (Array.isArray(state.entries)) {
-          state.entries = state.entries.map((e) => ({
+        const state = (persistedState ?? {}) as Partial<StoreState> & {
+          entries?: DiaryEntry[];
+        };
+        const result: Partial<StoreState> = { ...state };
+
+        // v1 的 entries 数组迁移到 entriesByDate[today]
+        if (version < 2 && Array.isArray(state.entries)) {
+          const today = dateKey();
+          const entries = state.entries.map((e) => ({
             ...e,
             weightBasis: (e as DiaryEntry).weightBasis ?? ("cooked" as WeightBasis),
           }));
+          result.entriesByDate = { [today]: entries };
+          delete (result as Record<string, unknown>).entries;
         }
+
+        // 确保 entriesByDate 存在
+        if (!result.entriesByDate) result.entriesByDate = {};
+        if (!result.waterByDate) result.waterByDate = {};
+
         // 兼容旧版自定义食物：补齐生重字段与配置
-        if (Array.isArray(state.customFoods)) {
-          state.customFoods = state.customFoods.map((f) => {
+        if (Array.isArray(result.customFoods)) {
+          result.customFoods = result.customFoods.map((f) => {
             const food = f as CustomFood;
             return {
               ...food,
@@ -123,7 +353,11 @@ export const useStore = create<StoreState>()(
             };
           });
         }
-        return state as StoreState;
+
+        // 确保默认值
+        if (!result.macroPresetId) result.macroPresetId = "balanced";
+
+        return result as StoreState;
       },
     }
   )
