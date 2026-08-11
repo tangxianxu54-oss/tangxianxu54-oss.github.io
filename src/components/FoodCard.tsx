@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Plus, Trash2, ArrowRightLeft, Pencil } from "lucide-react";
 import type { Food, WeightBasis } from "@/data/foods";
 import type { MealType } from "@/store/useStore";
@@ -47,7 +47,7 @@ function pickNutrition(food: Food, basis: WeightBasis) {
       };
 }
 
-export default function FoodCard({ food, onAdd, onDelete, onEdit }: FoodCardProps) {
+function FoodCard({ food, onAdd, onDelete, onEdit }: FoodCardProps) {
   const [grams, setGrams] = useState(100);
   const [expanded, setExpanded] = useState(false);
   const [mealType, setMealType] = useState<MealType>("breakfast");
@@ -231,6 +231,9 @@ export default function FoodCard({ food, onAdd, onDelete, onEdit }: FoodCardProp
     </div>
   );
 }
+
+// ★ 优化：memo 避免父组件搜索/过滤时所有卡片不必要重渲染
+export default memo(FoodCard);
 
 function Per100gPanel({
   basis,

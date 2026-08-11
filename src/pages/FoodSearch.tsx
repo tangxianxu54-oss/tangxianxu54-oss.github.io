@@ -1,10 +1,13 @@
-import { useState, useMemo } from "react";
-import { Search, Flame, Plus } from "lucide-react";
+import { useState, useMemo, useDeferredValue, useEffect } from "react";
+import { Search, Flame, Plus, ChevronDown } from "lucide-react";
 import { foods, CATEGORIES, type Food, type WeightBasis } from "@/data/foods";
 import FoodCard from "@/components/FoodCard";
 import AddFoodModal from "@/components/AddFoodModal";
 import { useStore, type MealType, type CustomFood } from "@/store/useStore";
-import { pinyinMatch } from "@/utils/pinyin";
+import { getCachedInitials, precomputeInitials, pinyinMatchCached } from "@/utils/pinyin";
+
+// 懒加载每页数量
+const PAGE_SIZE = 40;
 
 export default function FoodSearch() {
   const [query, setQuery] = useState("");
@@ -22,8 +25,26 @@ export default function FoodSearch() {
     [customFoods]
   );
 
+  // ★ 优化1：拼音首字母预计算缓存 —— 只在 allFoods 变化时计算一次
+  const pinyinMap = useMemo(() => {
+    // 先批量预计算所有食物名的拼音（填入全局缓存）
+    precomputeInitials(allFoods.map((f) => f.name));
+    // 构建 id → initials 的查找表
+    const map = new Map<string, string>();
+    for (const f of allFoods) {
+      map.set(f.id, getCachedInitials(f.name));
+    }
+    return map;
+  }, [allFoods]);
+
+  // ★ 优化2：搜索防抖 —— useDeferredValue 让输入保持流畅，
+  //   搜索在空闲时执行，不阻塞用户打字
+  const deferredQuery = useDeferredValue(query);
+  // 当前显示的条数（搜索词或分类变化时重置）
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
+
   const filteredFoods = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const q = deferredQuery.toLowerCase().trim();
     let result = allFoods;
     if (q) {
       result = result.filter(
@@ -31,15 +52,42 @@ export default function FoodSearch() {
           f.name.toLowerCase().includes(q) ||
           f.nameEn.toLowerCase().includes(q) ||
           f.category.includes(q) ||
-          // 拼音首字母匹配（如 "jxr" → 鸡胸肉）
-          pinyinMatch(q, f.name)
+          // ★ 优化1：使用缓存的拼音首字母匹配，避免每次重新计算
+          pinyinMatchCached(q, pinyinMap.get(f.id) ?? "")
       );
     }
     if (activeCategory !== "全部") {
       result = result.filter((f) => f.category === activeCategory);
     }
     return result;
-  }, [query, activeCategory, allFoods]);
+  }, [deferredQuery, activeCategory, allFoods, pinyinMap]);
+
+  // 搜索词或分类变化时重置显示数量
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE);
+  }, [deferredQuery, activeCategory]);
+
+  // ★ 优化3：列表懒加载 —— 只渲染前 displayCount 条，避免一次性渲染 300+ 卡片
+  const visibleFoods = useMemo(
+    () => filteredFoods.slice(0, displayCount),
+    [filteredFoods, displayCount]
+  );
+  const hasMore = displayCount < filteredFoods.length;
+
+  // 滚动触底自动加载
+  useEffect(() => {
+    if (!hasMore) return;
+    const onScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.body.scrollHeight - 400
+      ) {
+        setDisplayCount((c) => c + PAGE_SIZE);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [hasMore]);
 
   const handleAdd = (food: Food, grams: number, mealType: MealType, basis: WeightBasis) => {
     const ratio = grams / 100;
@@ -156,9 +204,14 @@ export default function FoodSearch() {
         <>
           <p className="mb-4 text-xs text-white/40">
             共 {filteredFoods.length} 种食物 · 点击卡片展开输入克数
+            {hasMore && (
+              <span className="ml-1 text-white/30">
+                （已显示 {visibleFoods.length}，滚动加载更多）
+              </span>
+            )}
           </p>
           <div className="grid gap-3 md:grid-cols-2">
-            {filteredFoods.map((food) => (
+            {visibleFoods.map((food) => (
               <FoodCard
                 key={food.id}
                 food={food}
@@ -172,6 +225,18 @@ export default function FoodSearch() {
               />
             ))}
           </div>
+          {/* 手动加载更多按钮（移动端滚动 fallback） */}
+          {hasMore && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setDisplayCount((c) => c + PAGE_SIZE)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-white/60 transition-all hover:bg-white/10 hover:text-cream"
+              >
+                <ChevronDown className="h-4 w-4" />
+                加载更多（剩余 {filteredFoods.length - visibleFoods.length} 种）
+              </button>
+            </div>
+          )}
         </>
       )}
 
