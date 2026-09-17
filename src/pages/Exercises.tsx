@@ -1,23 +1,23 @@
 import { useMemo, useState } from "react";
-import { Dumbbell, Plus, Trash2, Flame, Timer, Beef, Egg, CupSoda } from "lucide-react";
+import { Dumbbell, Plus, Trash2, Flame, Beef, Egg, CupSoda, TrendingUp } from "lucide-react";
 import {
   exercises,
   EXERCISE_CATEGORIES,
+  INCLINE_PRESETS,
+  calcStrengthBurn,
+  calcTimedBurn,
+  calcInclineBurn,
   type Exercise,
-  type ExerciseCategory,
 } from "@/data/exercises";
 import { useStore } from "@/store/useStore";
 import { getCachedInitials, pinyinMatchCached } from "@/utils/pinyin";
 
-// 热量公式：kcal = MET × 体重(kg) × 时长(小时)
-const calcBurn = (met: number, weight: number, minutes: number) =>
-  Math.round(met * weight * (minutes / 60));
-
 interface CartItem {
   key: number;
   exercise: Exercise;
-  minutes: number;
+  minutes?: number;
   kcal: number;
+  detail: string;
 }
 
 export default function Exercises() {
@@ -27,7 +27,6 @@ export default function Exercises() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("全部");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [minutes, setMinutes] = useState(30);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   // 拼音首字母缓存（复用食物搜索的缓存机制）
@@ -59,9 +58,8 @@ export default function Exercises() {
 
   const totalKcal = cart.reduce((sum, item) => sum + item.kcal, 0);
 
-  const addToCart = (exercise: Exercise, mins: number) => {
-    const kcal = calcBurn(exercise.met, weight, mins);
-    setCart((prev) => [...prev, { key: Date.now(), exercise, minutes: mins, kcal }]);
+  const addItem = (exercise: Exercise, kcal: number, detail: string, minutes?: number) => {
+    setCart((prev) => [...prev, { key: Date.now() + Math.random(), exercise, kcal, detail, minutes }]);
     setExpandedId(null);
   };
 
@@ -75,7 +73,7 @@ export default function Exercises() {
       <section className="mb-8 text-center">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-mint/20 bg-mint/5 px-3 py-1 text-xs text-mint">
           <Dumbbell className="h-3 w-3" />
-          MET 代谢当量 · 消耗 = MET × 体重 × 时长
+          力量按做功（重量×次数×组数） · 有氧按 MET / ACSM 方程
         </div>
         <h1 className="font-display text-5xl tracking-wide text-cream sm:text-6xl">
           训练 <span className="text-gradient-mint">消耗</span> 计算器
@@ -99,7 +97,7 @@ export default function Exercises() {
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white/40">kg</span>
         </div>
-        <span className="text-xs text-white/30">（自动读取个人资料）</span>
+        <span className="text-xs text-white/30">（用于组间休息与有氧消耗）</span>
       </div>
 
       {/* 搜索 + 分类 */}
@@ -142,12 +140,10 @@ export default function Exercises() {
                 <ExerciseCard
                   key={e.id}
                   exercise={e}
-                  weight={weight}
+                  bodyWeight={weight}
                   expanded={expandedId === e.id}
-                  minutes={minutes}
-                  setMinutes={setMinutes}
                   onToggle={() => setExpandedId(expandedId === e.id ? null : e.id)}
-                  onAdd={() => addToCart(e, minutes)}
+                  onAdd={addItem}
                 />
               ))}
             </div>
@@ -180,12 +176,14 @@ export default function Exercises() {
                       className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
                     >
                       <span>{item.exercise.emoji}</span>
-                      <span className="flex-1 truncate text-cream">{item.exercise.name}</span>
-                      <span className="text-xs text-white/40">{item.minutes}min</span>
-                      <span className="font-medium text-flame">{item.kcal} kcal</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-cream">{item.exercise.name}</div>
+                        <div className="truncate text-[10px] text-white/40">{item.detail}</div>
+                      </div>
+                      <span className="flex-shrink-0 font-medium text-flame">{item.kcal} kcal</span>
                       <button
                         onClick={() => removeFromCart(item.key)}
-                        className="text-white/30 transition-colors hover:text-red-400"
+                        className="flex-shrink-0 text-white/30 transition-colors hover:text-red-400"
                         aria-label="删除"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -225,26 +223,35 @@ export default function Exercises() {
   );
 }
 
-// ===== 单个动作卡片 =====
+// ===== 单个动作卡片（内部自管理输入状态） =====
 function ExerciseCard({
   exercise,
-  weight,
+  bodyWeight,
   expanded,
-  minutes,
-  setMinutes,
   onToggle,
   onAdd,
 }: {
   exercise: Exercise;
-  weight: number;
+  bodyWeight: number;
   expanded: boolean;
-  minutes: number;
-  setMinutes: (m: number) => void;
   onToggle: () => void;
-  onAdd: () => void;
+  onAdd: (exercise: Exercise, kcal: number, detail: string, minutes?: number) => void;
 }) {
-  const refBurn = calcBurn(exercise.met, 70, 30);
-  const realBurn = calcBurn(exercise.met, weight, minutes);
+  // 收起时右侧的参考值
+  const reference = (() => {
+    if (exercise.type === "strength") {
+      const refLoad = exercise.bodyweight ? bodyWeight : exercise.perSide ? 10 : 50;
+      const refReps = 10;
+      const refSets = 3;
+      const r = calcStrengthBurn(exercise, refLoad, refReps, refSets, bodyWeight);
+      return { value: r.kcal, label: `${refLoad}kg×${refReps}×${refSets}` };
+    }
+    if (exercise.type === "incline") {
+      const r = calcInclineBurn(4.8, 12, bodyWeight, 30);
+      return { value: r.kcal, label: "4.8km/h·12%·30min" };
+    }
+    return { value: calcTimedBurn(exercise.met ?? 4, 70, 30), label: "kcal/30min" };
+  })();
 
   return (
     <div
@@ -265,44 +272,319 @@ function ExerciseCard({
             <p className="truncate text-xs text-white/35">{exercise.nameEn}</p>
           </div>
           <div className="text-right">
-            <p className="font-display text-lg text-mint">{refBurn}</p>
-            <p className="text-[10px] text-white/30">kcal/30min</p>
+            <p className="font-display text-lg text-mint">{reference.value}</p>
+            <p className="text-[10px] text-white/30">{reference.label}</p>
           </div>
         </div>
-        <p className="mt-1.5 text-xs text-white/40">MET {exercise.met} · {exercise.tip}</p>
+        <p className="mt-1.5 text-xs text-white/40">
+          {exercise.type === "strength"
+            ? `做功模型 · 位移 ${exercise.liftDistance}m${exercise.perSide ? " · 单边×2" : ""} · ${exercise.tip}`
+            : exercise.type === "incline"
+            ? exercise.tip
+            : `MET ${exercise.met} · ${exercise.tip}`}
+        </p>
       </button>
 
-      {/* 展开区：时长输入 */}
-      {expanded && (
-        <div className="border-t border-white/10 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Timer className="h-4 w-4 flex-shrink-0 text-mint" />
-            <input
-              type="range"
-              min={5}
-              max={180}
-              step={5}
-              value={minutes}
-              onChange={(e) => setMinutes(Number(e.target.value))}
-              className="h-1.5 flex-1 accent-mint"
-            />
-            <span className="w-16 text-right text-sm text-cream">{minutes} 分钟</span>
-          </div>
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-white/60">
-              消耗 <span className="font-display text-lg text-flame">{realBurn}</span> kcal
-              <span className="ml-1 text-xs text-white/30">（{weight}kg）</span>
-            </p>
-            <button
-              onClick={onAdd}
-              className="flex items-center gap-1 rounded-full bg-gradient-to-r from-mint to-mint-dark px-4 py-1.5 text-sm font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
-            >
-              <Plus className="h-4 w-4" />
-              添加
-            </button>
-          </div>
-        </div>
+      {/* 展开区：按类型渲染不同输入 */}
+      {expanded && exercise.type === "strength" && (
+        <StrengthInputs
+          exercise={exercise}
+          bodyWeight={bodyWeight}
+          onAdd={onAdd}
+        />
       )}
+      {expanded && exercise.type === "timed" && (
+        <TimedInputs
+          exercise={exercise}
+          bodyWeight={bodyWeight}
+          onAdd={onAdd}
+        />
+      )}
+      {expanded && exercise.type === "incline" && (
+        <InclineInputs
+          bodyWeight={bodyWeight}
+          onAdd={(kcal, detail, minutes) => onAdd(exercise, kcal, detail, minutes)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ===== 力量训练输入：重量 × 次数 × 组数 =====
+function StrengthInputs({
+  exercise,
+  bodyWeight,
+  onAdd,
+}: {
+  exercise: Exercise;
+  bodyWeight: number;
+  onAdd: (exercise: Exercise, kcal: number, detail: string) => void;
+}) {
+  const [load, setLoad] = useState<number>(exercise.bodyweight ? bodyWeight : exercise.perSide ? 10 : 40);
+  const [reps, setReps] = useState(10);
+  const [sets, setSets] = useState(3);
+
+  const result = calcStrengthBurn(exercise, load, reps, sets, bodyWeight);
+  const durationMin = Math.round(result.totalSeconds / 6) / 10;
+
+  return (
+    <div className="border-t border-white/10 px-4 py-3">
+      <div className="grid grid-cols-3 gap-2">
+        <NumberField
+          label={exercise.bodyweight ? "负重 kg（自重）" : exercise.perSide ? "重量 kg（单边）" : "重量 kg"}
+          value={load}
+          min={0}
+          max={300}
+          step={2.5}
+          onChange={setLoad}
+        />
+        <NumberField label="次数 /组" value={reps} min={1} max={100} step={1} onChange={setReps} />
+        <NumberField label="组数" value={sets} min={1} max={20} step={1} onChange={setSets} />
+      </div>
+
+      {/* 实时结果 */}
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-lg bg-white/5 py-1.5">
+          <p className="text-[10px] text-white/40">总吨位</p>
+          <p className="text-sm font-medium text-cream">{result.totalTonnage} 吨</p>
+        </div>
+        <div className="rounded-lg bg-white/5 py-1.5">
+          <p className="text-[10px] text-white/40">预计时长</p>
+          <p className="text-sm font-medium text-cream">{durationMin} 分钟</p>
+        </div>
+        <div className="rounded-lg bg-flame/10 py-1.5">
+          <p className="text-[10px] text-white/40">总消耗</p>
+          <p className="text-sm font-medium text-flame">{result.kcal} kcal</p>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[10px] text-white/30">
+        含做功 {result.workKcal} kcal + 组间休息 {result.restKcal} kcal（{(sets - 1) * 90 > 0 ? `${(sets - 1) * 90}s 休息` : "无组间休息"}）
+      </p>
+
+      <div className="mt-3 text-right">
+        <button
+          onClick={() =>
+            onAdd(
+              exercise,
+              result.kcal,
+              `${load}kg × ${reps}次 × ${sets}组 · ${result.totalTonnage}吨 · 约${durationMin}min`
+            )
+          }
+          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-mint to-mint-dark px-4 py-1.5 text-sm font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
+        >
+          <Plus className="h-4 w-4" />
+          添加
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===== 时间制输入（普通有氧/腹部） =====
+function TimedInputs({
+  exercise,
+  bodyWeight,
+  onAdd,
+}: {
+  exercise: Exercise;
+  bodyWeight: number;
+  onAdd: (exercise: Exercise, kcal: number, detail: string, minutes: number) => void;
+}) {
+  const [minutes, setMinutes] = useState(30);
+  const kcal = calcTimedBurn(exercise.met ?? 4, bodyWeight, minutes);
+
+  return (
+    <div className="border-t border-white/10 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-white/50">时长</span>
+        <input
+          type="range"
+          min={5}
+          max={120}
+          step={5}
+          value={minutes}
+          onChange={(e) => setMinutes(Number(e.target.value))}
+          className="h-1.5 flex-1 accent-mint"
+        />
+        <span className="w-16 text-right text-sm text-cream">{minutes} 分钟</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-sm text-white/60">
+          消耗 <span className="font-display text-lg text-flame">{kcal}</span> kcal
+          <span className="ml-1 text-xs text-white/30">（{bodyWeight}kg · MET {exercise.met}）</span>
+        </p>
+        <button
+          onClick={() => onAdd(exercise, kcal, `${minutes}min · MET ${exercise.met}`, minutes)}
+          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-mint to-mint-dark px-4 py-1.5 text-sm font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
+        >
+          <Plus className="h-4 w-4" />
+          添加
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===== 跑步机爬坡输入：速度 + 坡度 + 时长（自由组合 + 预设档） =====
+function InclineInputs({
+  bodyWeight,
+  onAdd,
+}: {
+  bodyWeight: number;
+  onAdd: (kcal: number, detail: string, minutes: number) => void;
+}) {
+  const [speed, setSpeed] = useState(4.8);
+  const [grade, setGrade] = useState(12);
+  const [minutes, setMinutes] = useState(30);
+
+  const result = calcInclineBurn(speed, grade, bodyWeight, minutes);
+
+  return (
+    <div className="border-t border-white/10 px-4 py-3">
+      {/* 预设档 */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {INCLINE_PRESETS.map((p) => {
+          const active = p.speed === speed && p.grade === grade && p.minutes === minutes;
+          return (
+            <button
+              key={p.name}
+              onClick={() => {
+                setSpeed(p.speed);
+                setGrade(p.grade);
+                setMinutes(p.minutes);
+              }}
+              title={p.desc}
+              className={`rounded-full px-2.5 py-1 text-[11px] transition-all ${
+                active
+                  ? "bg-mint text-charcoal"
+                  : "border border-white/10 bg-white/5 text-white/50 hover:text-cream"
+              }`}
+            >
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 速度 */}
+      <SliderRow
+        label="速度"
+        value={speed}
+        min={1}
+        max={10}
+        step={0.1}
+        unit="km/h"
+        onChange={setSpeed}
+      />
+      {/* 坡度 */}
+      <SliderRow
+        label="坡度"
+        value={grade}
+        min={0}
+        max={15}
+        step={0.5}
+        unit="%"
+        onChange={setGrade}
+      />
+      {/* 时长 */}
+      <SliderRow
+        label="时长"
+        value={minutes}
+        min={5}
+        max={90}
+        step={5}
+        unit="分钟"
+        onChange={setMinutes}
+      />
+
+      <div className="mt-3 flex items-center justify-between">
+        <p className="text-sm text-white/60">
+          <TrendingUp className="mr-1 inline h-4 w-4 text-mint" />
+          MET <span className="text-cream">{result.met}</span> · 消耗{" "}
+          <span className="font-display text-lg text-flame">{result.kcal}</span> kcal
+        </p>
+        <button
+          onClick={() =>
+            onAdd(
+              result.kcal,
+              `${speed}km/h · ${grade}%坡度 · ${minutes}min · MET ${result.met}`,
+              minutes
+            )
+          }
+          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-mint to-mint-dark px-4 py-1.5 text-sm font-medium text-charcoal shadow-lg shadow-mint/30 transition-all hover:shadow-mint/50"
+        >
+          <Plus className="h-4 w-4" />
+          添加
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ===== 通用小组件 =====
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] text-white/40">{label}</span>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
+        className="w-full rounded-lg border border-white/10 bg-charcoal/60 px-2 py-1.5 text-center text-sm text-cream outline-none transition-all focus:border-mint"
+      />
+    </label>
+  );
+}
+
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="mb-2 flex items-center gap-3">
+      <span className="w-10 flex-shrink-0 text-xs text-white/50">{label}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="h-1.5 flex-1 accent-mint"
+      />
+      <span className="w-20 text-right text-sm text-cream">
+        {value} <span className="text-xs text-white/40">{unit}</span>
+      </span>
     </div>
   );
 }
