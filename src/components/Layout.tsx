@@ -9,7 +9,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-white/5 py-6 text-center text-xs text-white/30">
-        <p>数据仅供参考，以每 100g 为基准 · 采用 Mifflin-St Jeor 公式</p>
+        <p>数据仅供参考，以每 100g 为基准 · 摄入采用 Mifflin-St Jeor 公式 · 消耗采用 MET 代谢当量标准</p>
       </footer>
     </div>
   );

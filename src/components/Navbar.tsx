@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Flame, Calculator, BookOpen } from "lucide-react";
+import { Flame, Calculator, BookOpen, Dumbbell } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "食物查询", icon: Flame },
   { to: "/calculator", label: "每日摄入", icon: Calculator },
   { to: "/diary", label: "当日餐单", icon: BookOpen },
+  { to: "/exercises", label: "训练消耗", icon: Dumbbell },
 ];
 
 export default function Navbar() {
