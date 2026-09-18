@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { Dumbbell, Plus, Trash2, Flame, Beef, Egg, CupSoda, TrendingUp } from "lucide-react";
+import {
+  Dumbbell, Plus, Trash2, Flame, Beef, Egg, CupSoda, TrendingUp,
+  ChevronLeft, ChevronRight, Calendar,
+} from "lucide-react";
 import {
   exercises,
   EXERCISE_CATEGORIES,
@@ -9,25 +12,36 @@ import {
   calcInclineBurn,
   type Exercise,
 } from "@/data/exercises";
-import { useStore } from "@/store/useStore";
+import { useStore, dateKey } from "@/store/useStore";
 import { getCachedInitials, pinyinMatchCached } from "@/utils/pinyin";
+import CalorieBalanceCard from "@/components/CalorieBalanceCard";
 
-interface CartItem {
-  key: number;
-  exercise: Exercise;
-  minutes?: number;
-  kcal: number;
-  detail: string;
+// 日期显示
+function formatDateDisplay(date: Date): string {
+  const today = dateKey();
+  const yesterday = dateKey(new Date(Date.now() - 86400000));
+  const key = dateKey(date);
+  if (key === today) return "今天";
+  if (key === yesterday) return "昨天";
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
 export default function Exercises() {
   const profileWeight = useStore((s) => s.profile?.weight ?? 70);
 
+  // 按日期持久化的训练日志
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const dateStr = dateKey(selectedDate);
+  const isToday = dateStr === dateKey();
+  const logs = useStore((s) => s.exerciseLogsByDate[dateStr] ?? []);
+  const addExerciseLog = useStore((s) => s.addExerciseLog);
+  const removeExerciseLog = useStore((s) => s.removeExerciseLog);
+  const clearExerciseLogs = useStore((s) => s.clearExerciseLogs);
+
   const [weight, setWeight] = useState<number>(profileWeight);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("全部");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
 
   // 拼音首字母缓存（复用食物搜索的缓存机制）
   const pinyinMap = useMemo(() => {
@@ -56,21 +70,34 @@ export default function Exercises() {
     return result;
   }, [query, activeCategory, pinyinMap]);
 
-  const totalKcal = cart.reduce((sum, item) => sum + item.kcal, 0);
+  const totalKcal = logs.reduce((sum, item) => sum + item.kcal, 0);
 
   const addItem = (exercise: Exercise, kcal: number, detail: string, minutes?: number) => {
-    setCart((prev) => [...prev, { key: Date.now() + Math.random(), exercise, kcal, detail, minutes }]);
+    addExerciseLog(
+      {
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        exerciseEmoji: exercise.emoji,
+        category: exercise.category,
+        kcal,
+        detail,
+        minutes,
+      },
+      dateStr
+    );
     setExpandedId(null);
   };
 
-  const removeFromCart = (key: number) => {
-    setCart((prev) => prev.filter((item) => item.key !== key));
+  const changeDate = (delta: number) => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + delta);
+    setSelectedDate(next);
   };
 
   return (
     <div className="animate-fade-in">
       {/* Hero 区 */}
-      <section className="mb-8 text-center">
+      <section className="mb-6 text-center">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-mint/20 bg-mint/5 px-3 py-1 text-xs text-mint">
           <Dumbbell className="h-3 w-3" />
           力量按做功（重量×次数×组数） · 有氧按 MET / ACSM 方程
@@ -83,21 +110,50 @@ export default function Exercises() {
         </p>
       </section>
 
-      {/* 体重输入 */}
-      <div className="mb-6 flex items-center justify-center gap-3">
-        <label className="text-sm text-white/60">当前体重</label>
-        <div className="relative">
-          <input
-            type="number"
-            min={30}
-            max={200}
-            value={weight}
-            onChange={(e) => setWeight(Math.max(0, Number(e.target.value)))}
-            className="w-24 rounded-xl border border-white/10 bg-charcoal-light/60 py-2 pl-3 pr-8 text-center text-cream outline-none transition-all focus:border-mint focus:ring-2 focus:ring-mint/20"
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white/40">kg</span>
+      {/* 体重 + 日期选择 */}
+      <div className="mb-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-white/60">当前体重</label>
+          <div className="relative">
+            <input
+              type="number"
+              min={30}
+              max={200}
+              value={weight}
+              onChange={(e) => setWeight(Math.max(0, Number(e.target.value)))}
+              className="w-24 rounded-xl border border-white/10 bg-charcoal-light/60 py-2 pl-3 pr-8 text-center text-cream outline-none transition-all focus:border-mint focus:ring-2 focus:ring-mint/20"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white/40">kg</span>
+          </div>
         </div>
-        <span className="text-xs text-white/30">（用于组间休息与有氧消耗）</span>
+        <div className="flex items-center gap-1 rounded-2xl border border-white/10 bg-charcoal-light/60 px-2 py-1.5">
+          <button
+            onClick={() => changeDate(-1)}
+            className="rounded-lg px-2 py-1 text-white/50 transition-all hover:bg-white/5 hover:text-cream"
+            aria-label="前一天"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-1.5 px-2">
+            <Calendar className="h-4 w-4 text-mint" />
+            <span className="font-display text-lg text-cream">{formatDateDisplay(selectedDate)}</span>
+            {!isToday && (
+              <button
+                onClick={() => setSelectedDate(new Date())}
+                className="rounded-lg bg-mint/10 px-2 py-0.5 text-[10px] text-mint transition-all hover:bg-mint/20"
+              >
+                回今天
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => changeDate(1)}
+            className="rounded-lg px-2 py-1 text-white/50 transition-all hover:bg-white/5 hover:text-cream"
+            aria-label="后一天"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* 搜索 + 分类 */}
@@ -126,6 +182,11 @@ export default function Exercises() {
         ))}
       </div>
 
+      {/* 今日热量收支图 */}
+      <div className="mb-6">
+        <CalorieBalanceCard date={dateStr} onSelectDate={setSelectedDate} />
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* 动作卡片 */}
         <div>
@@ -150,39 +211,56 @@ export default function Exercises() {
           )}
         </div>
 
-        {/* 训练清单侧栏 */}
+        {/* 当日训练记录侧栏（持久化） */}
         <aside className="lg:sticky lg:top-20 h-fit">
           <div className="rounded-2xl border border-white/10 bg-charcoal-light/60 p-5 backdrop-blur-sm">
-            <h2 className="mb-4 flex items-center gap-2 font-display text-lg text-cream">
-              <Flame className="h-5 w-5 text-flame" />
-              本次训练
-              {cart.length > 0 && (
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50">
-                  {cart.length} 项
-                </span>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-lg text-cream">
+                <Flame className="h-5 w-5 text-flame" />
+                {isToday ? "今日训练" : `${formatDateDisplay(selectedDate)}训练`}
+                {logs.length > 0 && (
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50">
+                    {logs.length} 项
+                  </span>
+                )}
+              </h2>
+              {logs.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm(`确定清空 ${formatDateDisplay(selectedDate)} 的全部训练记录吗？`)) {
+                      clearExerciseLogs(dateStr);
+                    }
+                  }}
+                  className="rounded-lg p-1.5 text-white/30 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                  title="清空当日训练"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               )}
-            </h2>
+            </div>
 
-            {cart.length === 0 ? (
+            {logs.length === 0 ? (
               <p className="py-6 text-center text-sm text-white/30">
-                点击动作卡片添加训练项目
+                点击动作卡片记录训练项目
+                <br />
+                <span className="text-xs">记录会按日期自动保存</span>
               </p>
             ) : (
               <>
                 <ul className="mb-4 space-y-2">
-                  {cart.map((item) => (
+                  {logs.map((item) => (
                     <li
-                      key={item.key}
+                      key={item.id}
                       className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
                     >
-                      <span>{item.exercise.emoji}</span>
+                      <span>{item.exerciseEmoji}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-cream">{item.exercise.name}</div>
+                        <div className="truncate text-cream">{item.exerciseName}</div>
                         <div className="truncate text-[10px] text-white/40">{item.detail}</div>
                       </div>
                       <span className="flex-shrink-0 font-medium text-flame">{item.kcal} kcal</span>
                       <button
-                        onClick={() => removeFromCart(item.key)}
+                        onClick={() => removeExerciseLog(item.id, dateStr)}
                         className="flex-shrink-0 text-white/30 transition-colors hover:text-red-400"
                         aria-label="删除"
                       >
@@ -194,7 +272,7 @@ export default function Exercises() {
 
                 {/* 总消耗 */}
                 <div className="rounded-xl bg-gradient-to-r from-flame/20 to-flame/5 p-4 text-center">
-                  <p className="text-xs text-white/50">总消耗</p>
+                  <p className="text-xs text-white/50">当日训练总消耗</p>
                   <p className="font-display text-3xl text-flame">{totalKcal} <span className="text-base">kcal</span></p>
                 </div>
 

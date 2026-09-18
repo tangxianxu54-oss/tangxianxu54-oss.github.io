@@ -26,6 +26,19 @@ export interface DiaryEntry {
 
 export type CustomFood = Food & { isCustom?: true };
 
+// 一条训练消耗记录（按日期分组持久化）
+export interface ExerciseLogEntry {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  exerciseEmoji: string;
+  category: string;
+  kcal: number;
+  detail: string;
+  minutes?: number;
+  addedAt: number;
+}
+
 export interface NutritionTotals {
   calories: number;
   carbs: number;
@@ -45,6 +58,8 @@ export function dateKey(date: Date = new Date()): string {
 interface StoreState {
   // 按日期分组的餐单记录
   entriesByDate: Record<string, DiaryEntry[]>;
+  // 按日期分组的训练消耗记录
+  exerciseLogsByDate: Record<string, ExerciseLogEntry[]>;
   // 按日期记录的饮水量 (ml)
   waterByDate: Record<string, number>;
   profile: UserProfile | null;
@@ -59,6 +74,12 @@ interface StoreState {
   updateEntryGrams: (id: string, grams: number, date?: string) => void;
   clearEntries: (date?: string) => void;
   getEntries: (date?: string) => DiaryEntry[];
+
+  // 训练日志操作（带日期）
+  addExerciseLog: (entry: Omit<ExerciseLogEntry, "id" | "addedAt">, date?: string) => void;
+  removeExerciseLog: (id: string, date?: string) => void;
+  clearExerciseLogs: (date?: string) => void;
+  getExerciseLogs: (date?: string) => ExerciseLogEntry[];
 
   // 饮水操作
   addWater: (ml: number, date?: string) => void;
@@ -105,6 +126,7 @@ export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       entriesByDate: {},
+      exerciseLogsByDate: {},
       waterByDate: {},
       profile: defaultProfile,
       targets: recomputeTargets(defaultProfile, "balanced", null),
@@ -182,6 +204,43 @@ export const useStore = create<StoreState>()(
       getEntries: (date) => {
         const key = date ?? dateKey();
         return get().entriesByDate[key] ?? [];
+      },
+
+      addExerciseLog: (entry, date) => {
+        const key = date ?? dateKey();
+        set((state) => ({
+          exerciseLogsByDate: {
+            ...state.exerciseLogsByDate,
+            [key]: [
+              ...(state.exerciseLogsByDate[key] ?? []),
+              { ...entry, id: crypto.randomUUID(), addedAt: Date.now() },
+            ],
+          },
+        }));
+      },
+
+      removeExerciseLog: (id, date) => {
+        const key = date ?? dateKey();
+        set((state) => ({
+          exerciseLogsByDate: {
+            ...state.exerciseLogsByDate,
+            [key]: (state.exerciseLogsByDate[key] ?? []).filter((e) => e.id !== id),
+          },
+        }));
+      },
+
+      clearExerciseLogs: (date) => {
+        const key = date ?? dateKey();
+        set((state) => {
+          const next = { ...state.exerciseLogsByDate };
+          delete next[key];
+          return { exerciseLogsByDate: next };
+        });
+      },
+
+      getExerciseLogs: (date) => {
+        const key = date ?? dateKey();
+        return get().exerciseLogsByDate[key] ?? [];
       },
 
       addWater: (ml, date) => {
@@ -272,9 +331,10 @@ export const useStore = create<StoreState>()(
         const state = get();
         return JSON.stringify(
           {
-            version: 2,
+            version: 3,
             exportedAt: new Date().toISOString(),
             entriesByDate: state.entriesByDate,
+            exerciseLogsByDate: state.exerciseLogsByDate,
             waterByDate: state.waterByDate,
             profile: state.profile,
             macroPresetId: state.macroPresetId,
@@ -292,6 +352,7 @@ export const useStore = create<StoreState>()(
           if (!data || typeof data !== "object") return false;
           set((state) => ({
             entriesByDate: data.entriesByDate ?? state.entriesByDate,
+            exerciseLogsByDate: data.exerciseLogsByDate ?? state.exerciseLogsByDate,
             waterByDate: data.waterByDate ?? state.waterByDate,
             profile: data.profile ?? state.profile,
             macroPresetId: data.macroPresetId ?? state.macroPresetId,
@@ -314,15 +375,15 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "fitness-calorie-store",
-      version: 2,
-      // 版本迁移：v1 → v2
+      version: 3,
+      // 版本迁移
       migrate: (persistedState: unknown, version: number) => {
         const state = (persistedState ?? {}) as Partial<StoreState> & {
           entries?: DiaryEntry[];
         };
         const result: Partial<StoreState> = { ...state };
 
-        // v1 的 entries 数组迁移到 entriesByDate[today]
+        // v1 → v2：entries 数组迁移到 entriesByDate[today]
         if (version < 2 && Array.isArray(state.entries)) {
           const today = dateKey();
           const entries = state.entries.map((e) => ({
@@ -333,8 +394,9 @@ export const useStore = create<StoreState>()(
           delete (result as Record<string, unknown>).entries;
         }
 
-        // 确保 entriesByDate 存在
+        // 确保按日分组的数据结构存在（v2 → v3 新增训练日志）
         if (!result.entriesByDate) result.entriesByDate = {};
+        if (!result.exerciseLogsByDate) result.exerciseLogsByDate = {};
         if (!result.waterByDate) result.waterByDate = {};
 
         // 兼容旧版自定义食物：补齐生重字段与配置

@@ -10,6 +10,7 @@ import {
 } from "@/store/useStore";
 import MacroRing from "@/components/MacroRing";
 import ProgressBar from "@/components/ProgressBar";
+import CalorieBalanceCard from "@/components/CalorieBalanceCard";
 
 const mealLabels: Record<MealType, string> = {
   breakfast: "早餐",
@@ -238,22 +239,29 @@ export default function Diary() {
       </div>
 
       {entries.length === 0 ? (
-        <div className="glass-card flex flex-col items-center justify-center rounded-2xl py-24 text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
-            <BookOpen className="h-8 w-8 text-white/30" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <div className="glass-card flex flex-col items-center justify-center rounded-2xl py-24 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
+                <BookOpen className="h-8 w-8 text-white/30" />
+              </div>
+              <p className="mb-1 text-lg font-medium text-cream">{isToday ? "还没有添加食物" : "当天无餐单记录"}</p>
+              <p className="mb-6 text-sm text-white/40">
+                {isToday ? "前往「食物查询」页搜索食物并添加到当日餐单" : "切换日期查看其他天的记录"}
+              </p>
+              {isToday && (
+                <a
+                  href="/"
+                  className="rounded-xl bg-gradient-to-r from-flame to-flame-dark px-6 py-2.5 font-medium text-white shadow-lg shadow-flame/30"
+                >
+                  去添加食物
+                </a>
+              )}
+            </div>
           </div>
-          <p className="mb-1 text-lg font-medium text-cream">{isToday ? "还没有添加食物" : "当天无餐单记录"}</p>
-          <p className="mb-6 text-sm text-white/40">
-            {isToday ? "前往「食物查询」页搜索食物并添加到当日餐单" : "切换日期查看其他天的记录"}
-          </p>
-          {isToday && (
-            <a
-              href="/"
-              className="rounded-xl bg-gradient-to-r from-flame to-flame-dark px-6 py-2.5 font-medium text-white shadow-lg shadow-flame/30"
-            >
-              去添加食物
-            </a>
-          )}
+          <div className="space-y-4">
+            <CalorieBalanceCard date={dateStr} onSelectDate={setSelectedDate} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -291,6 +299,9 @@ export default function Diary() {
 
           {/* 右侧：营养概览 */}
           <div className="space-y-4">
+            {/* 今日热量收支图 */}
+            <CalorieBalanceCard date={dateStr} onSelectDate={setSelectedDate} />
+
             {/* 环形图 */}
             <div className="glass-card rounded-2xl p-6">
               <div className="mb-4 flex items-center gap-2">
