@@ -15,6 +15,9 @@ import {
 import { useStore, dateKey } from "@/store/useStore";
 import { getCachedInitials, pinyinMatchCached } from "@/utils/pinyin";
 import CalorieBalanceCard from "@/components/CalorieBalanceCard";
+import type { ExerciseLogEntry } from "@/store/useStore";
+
+const EMPTY_LOGS: ExerciseLogEntry[] = [];
 
 // 日期显示
 function formatDateDisplay(date: Date): string {
@@ -29,14 +32,15 @@ function formatDateDisplay(date: Date): string {
 export default function Exercises() {
   const profileWeight = useStore((s) => s.profile?.weight ?? 70);
 
-  // 按日期持久化的训练日志
+  // 按日期持久化的训练日志（注意：selector 必须返回稳定引用，不能内联 ?? []）
   const [selectedDate, setSelectedDate] = useState(new Date());
   const dateStr = dateKey(selectedDate);
   const isToday = dateStr === dateKey();
-  const logs = useStore((s) => s.exerciseLogsByDate[dateStr] ?? []);
+  const exerciseLogsByDate = useStore((s) => s.exerciseLogsByDate);
   const addExerciseLog = useStore((s) => s.addExerciseLog);
   const removeExerciseLog = useStore((s) => s.removeExerciseLog);
   const clearExerciseLogs = useStore((s) => s.clearExerciseLogs);
+  const logs = exerciseLogsByDate[dateStr] ?? EMPTY_LOGS;
 
   const [weight, setWeight] = useState<number>(profileWeight);
   const [query, setQuery] = useState("");
